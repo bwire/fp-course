@@ -15,9 +15,7 @@ import Course.Core
 -- >>> import Test.QuickCheck
 -- >>> import qualified Prelude as P(fmap, either)
 -- >>> instance Arbitrary a => Arbitrary (Validation a) where arbitrary = P.fmap (P.either Error Value) arbitrary
-data Validation a = Error Err | Value a
-  deriving (Eq, Show)
-
+data Validation a = Error Err | Value a deriving (Eq, Show)
 type Err = P.String
 
 -- | Returns whether or not the given validation is an error.

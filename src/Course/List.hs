@@ -31,10 +31,7 @@ import qualified Numeric as N
 -- BEGIN Helper functions and data types
 
 -- The custom list type
-data List t =
-  Nil
-  | t :. List t
-  deriving (Eq, Ord)
+data List t = Nil | t :. List t deriving (Eq, Ord)
 
 -- Right-associative
 infixr 5 :.
@@ -43,20 +40,22 @@ instance Show t => Show (List t) where
   show = show . foldRight (:) []
 
 -- The list of integers from zero to infinity.
-infinity ::
-  List Integer
-infinity =
-  let inf x = x :. inf (x+1)
-  in inf 0
+infinity :: List Integer
+infinity = let inf n = n :. inf (n + 1)
+           in inf 0 
 
 -- functions over List that you may consider using
 foldRight :: (a -> b -> b) -> b -> List a -> b
-foldRight _ b Nil      = b
-foldRight f b (h :. t) = f h (foldRight f b t)
+foldRight _ ini Nil = ini
+foldRight f ini (x:.xs) = f x (foldRight f ini xs)
 
 foldLeft :: (b -> a -> b) -> b -> List a -> b
-foldLeft _ b Nil      = b
-foldLeft f b (h :. t) = let b' = f b h in b' `seq` foldLeft f b' t
+foldLeft _ ini Nil = ini
+foldLeft f ini (x:.xs) = 
+  let ini' = f ini x
+  in ini' `seq` foldLeft f ini' xs
+
+-- f x ini
 
 -- END Helper functions and data types
 
@@ -71,12 +70,9 @@ foldLeft f b (h :. t) = let b' = f b h in b' `seq` foldLeft f b' t
 -- prop> x `headOr` infinity == 0
 --
 -- prop> x `headOr` Nil == x
-headOr ::
-  a
-  -> List a
-  -> a
-headOr =
-  error "todo: Course.List#headOr"
+-- the compiler sees that there's no need to a recursion, because it is lazy and the result can be taken without any further calculation
+headOr :: a -> List a -> a
+headOr = foldRight const
 
 -- | The product of the elements of a list.
 --
@@ -88,11 +84,8 @@ headOr =
 --
 -- >>> product (1 :. 2 :. 3 :. 4 :. Nil)
 -- 24
-product ::
-  List Int
-  -> Int
-product =
-  error "todo: Course.List#product"
+product :: List Int -> Int
+product = foldLeft (*) 1 
 
 -- | Sum the elements of the list.
 --
@@ -103,11 +96,8 @@ product =
 -- 10
 --
 -- prop> foldLeft (-) (sum x) x == 0
-sum ::
-  List Int
-  -> Int
-sum =
-  error "todo: Course.List#sum"
+sum :: List Int -> Int
+sum = foldLeft (+) 0
 
 -- | Return the length of the list.
 --
@@ -115,11 +105,10 @@ sum =
 -- 3
 --
 -- prop> sum (map (const 1) x) == length x
-length ::
-  List a
-  -> Int
-length =
-  error "todo: Course.List#length"
+length :: List a -> Int
+length = foldRight (((+1) . ) . flip const) 0
+-- just accumulator increment and nothing else
+-- simplest : foldLeft (const succ) 0 !!!
 
 -- | Map the given function on each element of the list.
 --
@@ -129,12 +118,8 @@ length =
 -- prop> headOr x (map (+1) infinity) == 1
 --
 -- prop> map id x == x
-map ::
-  (a -> b)
-  -> List a
-  -> List b
-map =
-  error "todo: Course.List#map"
+map :: (a -> b) -> List a -> List b
+map f = foldRight (\e a -> f e :. a) Nil
 
 -- | Return elements satisfying the given predicate.
 --
@@ -146,12 +131,8 @@ map =
 -- prop> filter (const True) x == x
 --
 -- prop> filter (const False) x == Nil
-filter ::
-  (a -> Bool)
-  -> List a
-  -> List a
-filter =
-  error "todo: Course.List#filter"
+filter :: (a -> Bool) -> List a -> List a
+filter p = foldRight (\e a -> if p e then e :. a else a) Nil
 
 -- | Append two lists to a new list.
 --
@@ -165,12 +146,8 @@ filter =
 -- prop> (x ++ y) ++ z == x ++ (y ++ z)
 --
 -- prop> x ++ Nil == x
-(++) ::
-  List a
-  -> List a
-  -> List a
-(++) =
-  error "todo: Course.List#(++)"
+(++) :: List a -> List a -> List a
+(++) = flip . foldRight $ (:.) 
 
 infixr 5 ++
 
@@ -184,11 +161,8 @@ infixr 5 ++
 -- prop> headOr x (flatten (y :. infinity :. Nil)) == headOr 0 y
 --
 -- prop> sum (map length x) == length (flatten x)
-flatten ::
-  List (List a)
-  -> List a
-flatten =
-  error "todo: Course.List#flatten"
+flatten :: List (List a) -> List a
+flatten = foldRight (++) Nil
 
 -- | Map a function then flatten to a list.
 --
@@ -200,22 +174,15 @@ flatten =
 -- prop> headOr x (flatMap id (y :. infinity :. Nil)) == headOr 0 y
 --
 -- prop> flatMap id (x :: List (List Int)) == flatten x
-flatMap ::
-  (a -> List b)
-  -> List a
-  -> List b
-flatMap =
-  error "todo: Course.List#flatMap"
+flatMap :: (a -> List b) -> List a -> List b
+flatMap f = flatten . map f
 
 -- | Flatten a list of lists to a list (again).
 -- HOWEVER, this time use the /flatMap/ function that you just wrote.
 --
 -- prop> let types = x :: List (List Int) in flatten x == flattenAgain x
-flattenAgain ::
-  List (List a)
-  -> List a
-flattenAgain =
-  error "todo: Course.List#flattenAgain"
+flattenAgain :: List (List a) -> List a
+flattenAgain = flatMap id
 
 -- | Convert a list of optional values to an optional list of values.
 --
@@ -239,11 +206,10 @@ flattenAgain =
 --
 -- >>> seqOptional (Empty :. map Full infinity)
 -- Empty
-seqOptional ::
-  List (Optional a)
-  -> Optional (List a)
-seqOptional =
-  error "todo: Course.List#seqOptional"
+seqOptional :: List (Optional a) -> Optional (List a)
+seqOptional = foldRight (\e a -> A.pure (:.) A.<*> e A.<*> a) (A.pure Nil)
+-- proposed variant !!!
+--seqOptional = foldRight (twiceOptional (:.)) (Full Nil)
 
 -- | Find the first element in the list matching the predicate.
 --
@@ -261,12 +227,8 @@ seqOptional =
 --
 -- >>> find (const True) infinity
 -- Full 0
-find ::
-  (a -> Bool)
-  -> List a
-  -> Optional a
-find =
-  error "todo: Course.List#find"
+find :: (a -> Bool) -> List a -> Optional a
+find p = headOr Empty . map Full . filter p 
 
 -- | Determine if the length of the given list is greater than 4.
 --
@@ -281,11 +243,8 @@ find =
 --
 -- >>> lengthGT4 infinity
 -- True
-lengthGT4 ::
-  List a
-  -> Bool
-lengthGT4 =
-  error "todo: Course.List#lengthGT4"
+lengthGT4 :: List a -> Bool
+lengthGT4 = (> 4) . length
 
 -- | Reverse a list.
 --
@@ -298,11 +257,8 @@ lengthGT4 =
 -- prop> let types = x :: List Int in reverse x ++ reverse y == reverse (y ++ x)
 --
 -- prop> let types = x :: Int in reverse (x :. Nil) == x :. Nil
-reverse ::
-  List a
-  -> List a
-reverse =
-  error "todo: Course.List#reverse"
+reverse :: List a -> List a
+reverse = foldLeft (flip (:.)) Nil
 
 -- | Produce an infinite `List` that seeds with the given value at its head,
 -- then runs the given function for subsequent elements
@@ -312,10 +268,7 @@ reverse =
 --
 -- >>> let (x:.y:.z:.w:._) = produce (*2) 1 in [x,y,z,w]
 -- [1,2,4,8]
-produce ::
-  (a -> a)
-  -> a
-  -> List a
+produce :: (a -> a) -> a -> List a
 produce f x = x :. produce f (f x)
 
 -- | Do anything other than reverse a list.
@@ -335,222 +288,122 @@ notReverse =
 
 ---- End of list exercises
 
-largeList ::
-  List Int
-largeList =
-  listh [1..50000]
+largeList :: List Int
+largeList = listh [1..50000]
 
-hlist ::
-  List a
-  -> [a]
-hlist =
-  foldRight (:) []
+hlist :: List a -> [a]
+hlist = foldRight (:) []
 
-listh ::
-  [a]
-  -> List a
-listh =
-  P.foldr (:.) Nil
+listh :: [a] -> List a
+listh = P.foldr (:.) Nil
 
-putStr ::
-  Chars
-  -> IO ()
-putStr =
-  P.putStr . hlist
+putStr :: Chars -> IO ()
+putStr = P.putStr . hlist
 
-putStrLn ::
-  Chars
-  -> IO ()
-putStrLn =
-  P.putStrLn . hlist
+putStrLn :: Chars -> IO ()
+putStrLn = P.putStrLn . hlist
 
-readFile ::
-  Filename
-  -> IO Chars
-readFile =
-  P.fmap listh . P.readFile . hlist
+readFile :: Filename -> IO Chars 
+readFile = P.fmap listh . P.readFile . hlist
 
-writeFile ::
-  Filename
-  -> Chars
-  -> IO ()
-writeFile n s =
-  P.writeFile (hlist n) (hlist s)
+writeFile :: Filename -> Chars -> IO ()
+writeFile n s = P.writeFile (hlist n) (hlist s)
 
-getLine ::
-  IO Chars
-getLine =
-  P.fmap listh P.getLine
+getLine :: IO Chars
+getLine = P.fmap listh P.getLine
 
-getArgs ::
-  IO (List Chars)
-getArgs =
-  P.fmap (listh . P.fmap listh) E.getArgs
+getArgs :: IO (List (List Char))
+getArgs = P.fmap (listh . P.fmap listh) E.getArgs
 
-isPrefixOf ::
-  Eq a =>
-  List a
-  -> List a
-  -> Bool
-isPrefixOf Nil _ =
-  True
-isPrefixOf _  Nil =
-  False
-isPrefixOf (x:.xs) (y:.ys) =
-  x == y && isPrefixOf xs ys
+isPrefixOf :: Eq a => List a -> List a -> Bool
+isPrefixOf Nil _ = True
+isPrefixOf _ Nil = False
+isPrefixOf (x:.xs) (p:.ps) = x == p && isPrefixOf xs ps
 
-isEmpty ::
-  List a
-  -> Bool
-isEmpty Nil =
-  True
-isEmpty (_:._) =
-  False
+isEmpty :: List a -> Bool
+isEmpty Nil = True
+isEmpty (_:._) = False
 
-span ::
-  (a -> Bool)
-  -> List a
-  -> (List a, List a)
-span p x =
-  (takeWhile p x, dropWhile p x)
+span :: (a -> Bool) -> List a -> (List a, List a)
+span p xs = (takeWhile p xs, dropWhile p xs)
 
-break ::
-  (a -> Bool)
-  -> List a
-  -> (List a, List a)
-break p =
-  span (not . p)
+break :: (a -> Bool) -> List a -> (List a, List a)
+break p = span (not . p)
 
-dropWhile ::
-  (a -> Bool)
-  -> List a
-  -> List a
-dropWhile _ Nil =
-  Nil
-dropWhile p xs@(x:.xs') =
-  if p x
-    then
-      dropWhile p xs'
-    else
-      xs
+dropWhile :: (a -> Bool) -> List a -> List a
+dropWhile _ Nil = Nil
+dropWhile p xs@(x:.xs') 
+  | p x = dropWhile p xs'
+  | otherwise = xs
+  
+takeWhile :: (a -> Bool) -> List a -> List a
+takeWhile _ Nil = Nil
+takeWhile p (x:.xs) 
+  | p x = x :. takeWhile p xs
+  | otherwise = Nil
+  
+zip :: List a -> List b -> List (a, b)
+zip = zipWith (,)
 
-takeWhile ::
-  (a -> Bool)
-  -> List a
-  -> List a
-takeWhile _ Nil =
-  Nil
-takeWhile p (x:.xs) =
-  if p x
-    then
-      x :. takeWhile p xs
-    else
-      Nil
+zipWith :: (a -> b -> c) -> List a -> List b -> List c  
+zipWith f (x:.xs) (y:.ys) = f x y :. zipWith f xs ys
+zipWith _ _ _ = Nil  
+  
+unfold :: (a -> Optional (b, a)) -> a -> List b
+unfold f b = case f b of
+  Empty -> Nil
+  Full (a, z) -> a :. unfold f z
+  
+lines :: Chars -> List Chars
+lines = listh . P.map listh . P.lines . hlist
 
-zip ::
-  List a
-  -> List b
-  -> List (a, b)
-zip =
-  zipWith (,)
+unlines :: List Chars -> Chars
+unlines = listh . P.unlines . P.map hlist . hlist
 
-zipWith ::
-  (a -> b -> c)
-  -> List a
-  -> List b
-  -> List c
-zipWith f (a:.as) (b:.bs) =
-  f a b :. zipWith f as bs
-zipWith _ _  _ =
-  Nil
+words :: Chars -> List Chars
+words = listh . P.map listh . P.words . hlist
 
-unfoldr ::
-  (a -> Optional (b, a))
-  -> a
-  -> List b
-unfoldr f b  =
-  case f b of
-    Full (a, z) -> a :. unfoldr f z
-    Empty -> Nil
+unwords :: List Chars -> Chars
+unwords = listh . P.unwords . P.map hlist . hlist
 
-lines ::
-  Chars
-  -> List Chars
-lines =
-  listh . P.fmap listh . P.lines . hlist
-
-unlines ::
-  List Chars
-  -> Chars
-unlines =
-  listh . P.unlines . hlist . map hlist
-
-words ::
-  Chars
-  -> List Chars
-words =
-  listh . P.fmap listh . P.words . hlist
-
-unwords ::
-  List Chars
-  -> Chars
-unwords =
-  listh . P.unwords . hlist . map hlist
-
-listOptional ::
-  (a -> Optional b)
-  -> List a
-  -> List b
-listOptional _ Nil =
-  Nil
-listOptional f (h:.t) =
+listOptional :: (a -> Optional b) -> List a -> List b
+listOptional _ Nil = Nil
+listOptional f (h :. t) =
   let r = listOptional f t
   in case f h of
-       Empty -> r
-       Full q -> q :. r
+    Empty -> r
+    Full q -> q :. r
+  
+any :: (a -> Bool) -> List a -> Bool  
+any p = foldRight ((||) . p) False
+  
+all :: (a -> Bool) -> List a -> Bool  
+all p = foldRight ((&&) . p) True
 
-any ::
-  (a -> Bool)
-  -> List a
-  -> Bool
-any p =
-  foldRight ((||) . p) False
+or :: List Bool -> Bool  
+or = any id
+  
+and :: List Bool -> Bool  
+and = all id
+  
+elem :: Eq a => a -> List a -> Bool  
+elem = any . (==)  
 
-all ::
-  (a -> Bool)
-  -> List a
-  -> Bool
-all p =
-  foldRight ((&&) . p) True
+notElem :: Eq a => a -> List a -> Bool  
+notElem = all . (/=)
+  
+  
+  
+  
 
-or ::
-  List Bool
-  -> Bool
-or =
-  any id
-
-and ::
-  List Bool
-  -> Bool
-and =
-  all id
-
-elem ::
-  Eq a =>
-  a
-  -> List a
-  -> Bool
-elem x =
-  any (== x)
-
-notElem ::
-  Eq a =>
-  a
-  -> List a
-  -> Bool
-notElem x =
-  all (/= x)
-
+  
+  
+  
+  
+  
+  
+  
+ 
 permutations
   :: List a -> List (List a)
 permutations xs0 =
