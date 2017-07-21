@@ -70,44 +70,40 @@ the contents of c
 
 -}
 
--- /Tip:/ use @getArgs@ and @run@
-main ::
-  IO ()
-main =
-  error "todo: Course.FileIO#main"
+type FilePath = Chars
+ 
+getFile :: FilePath -> IO (FilePath, Chars)
+getFile path = do
+  cont <- readFile path
+  return (path, cont) 
 
-type FilePath =
-  Chars
+-- suggested one
+--getFile :: FilePath -> IO (FilePath, Chars)
+--getFile = lift2 (<$>) (,) readFile
 
 -- /Tip:/ Use @getFiles@ and @printFiles@.
-run ::
-  FilePath
-  -> IO ()
-run =
-  error "todo: Course.FileIO#run"
+run :: FilePath -> IO ()
+run lpath = do
+  contents <- readFile lpath
+  res <- getFiles (lines contents)
+  printFiles res 
 
-getFiles ::
-  List FilePath
-  -> IO (List (FilePath, Chars))
-getFiles =
-  error "todo: Course.FileIO#getFiles"
+getFiles :: List FilePath -> IO (List (FilePath, Chars))
+getFiles = sequence . (<$>) getFile
 
-getFile ::
-  FilePath
-  -> IO (FilePath, Chars)
-getFile =
-  error "todo: Course.FileIO#getFile"
+printFiles :: List (FilePath, Chars) -> IO ()
+printFiles = void . sequence . (<$>) (uncurry printFile)
 
-printFiles ::
-  List (FilePath, Chars)
-  -> IO ()
-printFiles =
-  error "todo: Course.FileIO#printFiles"
+printFile :: FilePath -> Chars -> IO ()
+printFile path cont = 
+  putStrLn ("=====" ++ path) 
+  >> putStrLn cont
 
-printFile ::
-  FilePath
-  -> Chars
-  -> IO ()
-printFile =
-  error "todo: Course.FileIO#printFile"
+-- /Tip:/ use @getArgs@ and @run@
+main :: IO ()
+main = do
+  args <- getArgs
+  case args of
+    (path :. Nil) -> run path
+    _ -> putStrLn "usage: runhaskell io.hs filename"
 
