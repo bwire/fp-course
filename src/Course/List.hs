@@ -392,18 +392,6 @@ elem = any . (==)
 notElem :: Eq a => a -> List a -> Bool  
 notElem = all . (/=)
   
-  
-  
-  
-
-  
-  
-  
-  
-  
-  
-  
- 
 permutations
   :: List a -> List (List a)
 permutations xs0 =
@@ -417,7 +405,7 @@ permutations xs0 =
                in  (y:.us, f (t:.y:.us):.zs)
         in foldRight (\xs -> snd . interleave' id xs) (perms ts (t:.is)) (permutations is)
   in xs0 :. perms xs0 Nil
-
+  
 intersectBy ::
   (a -> b -> Bool)
   -> List a
