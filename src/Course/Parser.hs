@@ -388,7 +388,7 @@ ageParser = natural
 -- >>> isErrorResult (parse firstNameParser "abc")
 -- True
 firstNameParser :: Parser Chars
-firstNameParser = bindParser (\x -> bindParser (\xs -> valueParser (x:.xs)) (list lower)) upper
+firstNameParser = pure (:.) <*> upper <*> list lower 
 
 -- | Write a parser for Person.surname.
 --
@@ -404,14 +404,13 @@ firstNameParser = bindParser (\x -> bindParser (\xs -> valueParser (x:.xs)) (lis
 --
 -- >>> isErrorResult (parse surnameParser "abc")
 -- True
+
+
 surnameParser :: Parser Chars
-surnameParser = 
-  bindParser (\x -> 
-    bindParser (\xs -> 
-      bindParser (\lst -> 
-        valueParser (x:.xs ++ lst)) (list lower)) 
-   (thisMany 5 lower)) 
-  upper
+surnameParser = pure (((++) .) . (:.))
+  <*> upper
+  <*> thisMany 5 lower
+  <*> list lower
 
 -- | Write a parser for Person.smoker.
 --
@@ -468,12 +467,10 @@ phoneBodyParser = list (digit ||| is '-' ||| is '.')
 -- >>> isErrorResult (parse phoneParser "a123-456")
 -- True
 phoneParser :: Parser Chars
-phoneParser = 
-  bindParser (\fd -> 
-    bindParser (\body -> 
-      bindParser (\_ -> valueParser (fd :. body)) (is '#'))
-    phoneBodyParser) 
-  digit
+phoneParser = pure (:.)
+  <*> digit
+  <*> phoneBodyParser
+  <* is '#'
 
 -- | Write a parser for Person.
 --
@@ -519,19 +516,13 @@ phoneParser =
 --
 -- >>> parse personParser "123 Fred Clarkson y 123-456.789# rest"
 -- Result > rest< Person {age = 123, firstName = "Fred", surname = "Clarkson", smoker = 'y', phone = "123-456.789"}
-personParser :: Parser Person
-personParser = 
-  bindParser (\ag -> 
-    bindParser (\fn -> 
-      bindParser (\ln -> 
-        bindParser (\sm -> 
-          bindParser (\ph -> valueParser $ Person ag fn ln sm ph)
-          (spaces1 >>> phoneParser))
-        (spaces1 >>> smokerParser))
-      (spaces1 >>> surnameParser))
-    (spaces1 >>> firstNameParser)) 
-  ageParser
-  
+personParser :: Parser Person 
+personParser = pure Person
+  <*> ageParser
+  <*> (spaces1 *> firstNameParser)
+  <*> (spaces1 *> surnameParser)
+  <*> (spaces1 *> smokerParser)
+  <*> (spaces1 *> phoneParser)
 -- Make sure all the tests pass!
 
 
