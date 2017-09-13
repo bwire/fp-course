@@ -366,4 +366,4 @@ satisfyAny px = satisfy (or . sequence px)
 -- >>> isErrorResult (parse (betweenSepbyComma '[' ']' lower) "a]")
 -- True
 betweenSepbyComma :: Char -> Char -> Parser a -> Parser (List a)
-betweenSepbyComma a b g = betweenCharTok a b g `sepby` charTok ','
+betweenSepbyComma a b g = betweenCharTok a b (g `sepby` charTok ',')
