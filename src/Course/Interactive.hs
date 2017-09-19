@@ -153,11 +153,11 @@ interactive =
         pure False)
 
     (putStrLn "Select: " 
-    >- traverse (\(Op c s _) -> putStr (c:.Nil) >- putStr " - " >- putStrLn s) ops 
-    >- getChar 
-    >>= \c -> putStrLn ""
-    >- let o = find (\(Op c' _ _) -> c' == c) ops
-           r = case o of
+      >- traverse (\(Op c s _) -> putStr (c:.Nil) >- putStr " - " >- putStrLn s) ops 
+      >- getChar 
+      >>= \c -> putStrLn ""
+      >- let o = find (\(Op c' _ _) -> c' == c) ops
+             r = case o of
                 Empty -> (putStrLn "Not a valid selection. Try again!" >-)
                 Full (Op _ _ a) -> (a >-)
-       in r (pure c))
+         in r (pure c))

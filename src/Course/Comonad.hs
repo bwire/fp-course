@@ -37,4 +37,3 @@ instance Comonad ExactlyOne where
 (<$>) :: Comonad f => (a -> b) -> f a -> f b
 f <$> cm = f . copure <<= cm
 
---(<<=) ::(f a -> b) -> f a -> f b

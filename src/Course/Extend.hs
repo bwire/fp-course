@@ -17,7 +17,7 @@ import Course.Functor
 --   `∀f g. (f <<=) . (g <<=) ≅ (<<=) (f . (g <<=))`
 class Functor f => Extend f where
   -- Pronounced, extend.
-  (<<=) ::(f a -> b) -> f a -> f b
+  (<<=) :: (f a -> b) -> f a -> f b
 
 infixr 1 <<=
 
