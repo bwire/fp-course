@@ -29,6 +29,4 @@ instance Show NoCaseString where
   show = show . ncString
 
 instance Ord NoCaseString where
-  compare s1 s2 = 
-    let lowered = map toLower . ncString
-    in compare (lowered s1) (lowered s2)
+  compare = compare `on` map toLower . ncString
