@@ -11,18 +11,16 @@ import qualified Data.Set as S
 -- Return all anagrams of the given string
 -- that appear in the given dictionary file.
 fastAnagrams :: Chars -> Filename -> IO (List Chars)
-fastAnagrams word file = 
-  flip filter (permutations word) 
-    . flip S.member 
+fastAnagrams word file = (<$>) ncString
+    . flip filter (NoCaseString <$> permutations word) 
+    . flip S.member
     . S.fromList 
-    . hlist 
+    . hlist
+    . (<$>) NoCaseString  
     . lines <$> readFile file
   
 
-newtype NoCaseString =
-  NoCaseString {
-    ncString :: Chars
-  }
+newtype NoCaseString = NoCaseString { ncString :: Chars } deriving Ord
 
 instance Eq NoCaseString where
   (==) = (==) `on` map toLower . ncString
