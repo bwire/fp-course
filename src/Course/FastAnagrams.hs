@@ -20,10 +20,13 @@ fastAnagrams word file = (<$>) ncString
     . lines <$> readFile file
   
 
-newtype NoCaseString = NoCaseString { ncString :: Chars } deriving Ord
+newtype NoCaseString = NoCaseString { ncString :: Chars }
 
 instance Eq NoCaseString where
   (==) = (==) `on` map toLower . ncString
 
 instance Show NoCaseString where
   show = show . ncString
+
+instance Ord NoCaseString where
+  compare s1 s2 = compare (ncString s1) (ncString s2)
